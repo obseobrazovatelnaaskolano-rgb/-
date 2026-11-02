@@ -1,97 +1,52 @@
-import asyncio
 import logging
 from aiogram import Bot, Dispatcher, F, Router
-from aiogram.filters import CommandStart
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    InputMediaPhoto,
-    LabeledPrice,
-    Message,
-    PreCheckoutQuery,
-)
+from aiogram.filters import Command, CommandStart
+from aiogram.types import Message
 
-# Твой токен бота
 TOKEN = "9139344929:AAGgzO5qYI4JTsTCx1Fhy8KOFSj3jqjntBM"
+ADMIN_ID = 8849823837  # Твой ID
 
 router = Router()
 
+# Сюда будем сохранять ID покупателя, которому надо скинуть фотки
+last_buyer_id = None
 
-# 1. Приветствие по команде /start
+
 @router.message(CommandStart())
 async def cmd_start(message: Message):
-  text = "🔥 **Слив владельца Douyin Streams**\n\nНажмите кнопку ниже, чтобы получить доступ к материалам."
-
-  keyboard = InlineKeyboardMarkup(
-      inline_keyboard=[
-          [
-              InlineKeyboardButton(
-                  text="⭐ Заплатить 1 звезду", callback_data="buy_content"
-              )
-          ]
-      ]
-  )
-
-  await message.answer(text, reply_markup=keyboard, parse_mode="Markdown")
-
-
-# 2. Создание счета на 1 звезду (XTR)
-@router.callback_query(F.data == "buy_content")
-async def process_buy_command(callback: CallbackQuery, bot: Bot):
-  # amount=1 означает ровно 1 Telegram Star (⭐)
-  prices = [LabeledPrice(label="Доступ к материалам", amount=1)]
-
-  await bot.send_invoice(
-      chat_id=callback.message.chat.id,
-      title="Слив владельца Douyin Streams",
-      description="Доступ к эксклюзивным фотографиям (2 файла)",
-      payload="douyin_secret_payload",
-      currency="XTR",  # Валюта Telegram Stars
-      prices=prices,
-  )
-  await callback.answer()
+  global last_buyer_id
+  # Если /start пишет покупатель (не ты), бот запоминает его ID
+  if message.from_user.id != ADMIN_ID:
+    last_buyer_id = message.from_user.id
+    await message.answer("Ожидайте, скоро владелец пришлет материалы.")
+    # Уведомляем тебя, что клиент зашел
+    await message.bot.send_message(
+        ADMIN_ID,
+        f"🔔 Новый покупатель зашел в бота: {message.from_user.full_name} (ID: `{message.from_user.id}`)",
+    )
+  else:
+    await message.answer(
+        "Бот готов. Перешли сюда фотки, и я отправлю их последнему"
+        " покупателю."
+    )
 
 
-# 3. Обязательный шаг проверки перед покупкой
-@router.pre_checkout_query()
-async def process_pre_checkout_query(
-    pre_checkout_query: PreCheckoutQuery, bot: Bot
-):
-  await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+# Всё, что ты (админ) отправляешь боту, он пересылает последнему клиенту
+@router.message(F.from_user.id == ADMIN_ID)
+async def admin_forward(message: Message, bot: Bot):
+  global last_buyer_id
+  if not last_buyer_id:
+    await message.answer(
+        "⚠️ Пока нет покупателей, которым можно переслать."
+    )
+    return
 
-
-# 4. Успешная оплата -> Отправка двух фоток
-@router.message(F.successful_payment)
-async def successful_payment(message: Message, bot: Bot):
-  await message.answer(
-      "✅ Оплата прошла успешно! Держите обещанные материалы:"
-  )
-
-  chat_id = message.chat.id
-
-  # Отправляем первое фото
-  await bot.send_photo(
-      chat_id=chat_id,
-      photo=(
-          "AgACAgIAAxkBAAEDIWlq6AxUxIBA6aj7gacwUAmIOe9NgQACuh1rG0upQEsrRwksXr4cugEAAwIAA3kAAz0E"
-      ),
-      caption="🔥 Слив владельца Douyin Streams (1/2)",
-  )
-
-  # Небольшая пауза
-  await asyncio.sleep(0.5)
-
-  # Отправляем второе фото
-  await bot.send_photo(
-      chat_id=chat_id,
-      photo=(
-          "AgACAgIAAxkBAAEDIWxq6Ax_BRS7LAtIedmdf5y2xgzUngACuR1rG0upQEv-02Rb2GkdBAEAAwIAA3kAAz0E"
-      ),
-      caption="🔥 Слив владельца Douyin Streams (2/2)",
-  )
-    
-
+  try:
+    # Пересылаем твое сообщение (фотку, текст, файл) покупателю
+    await message.send_copy(chat_id=last_buyer_id)
+    await message.answer("✅ Успешно отправлено покупателю!")
+  except Exception as e:
+    await message.answer(f"❌ Ошибка отправки: {e}")
 
 
 async def main():
@@ -106,4 +61,7 @@ async def main():
 
 if __name__ == "__main__":
   logging.basicConfig(level=logging.INFO)
+  import asyncio
+
   asyncio.run(main())
+    
