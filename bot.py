@@ -61,32 +61,37 @@ async def process_pre_checkout_query(
   await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
 
-# 4. Успешная оплата -> Отправка двух фоток по очереди
+# 4. Успешная оплата -> Отправка двух фоток
 @router.message(F.successful_payment)
-async def successful_payment(message: Message):
+async def successful_payment(message: Message, bot: Bot):
   await message.answer(
       "✅ Оплата прошла успешно! Держите обещанные материалы:"
   )
 
+  chat_id = message.chat.id
+
   # Отправляем первое фото
-  await message.answer_photo(
+  await bot.send_photo(
+      chat_id=chat_id,
       photo=(
           "AgACAgIAAxkBAAEDIWlq6AxUxIBA6aj7gacwUAmIOe9NgQACuh1rG0upQEsrRwksXr4cugEAAwIAA3kAAz0E"
       ),
       caption="🔥 Слив владельца Douyin Streams (1/2)",
   )
 
-  # Небольшая пауза в 0.5 секунды
+  # Небольшая пауза
   await asyncio.sleep(0.5)
 
   # Отправляем второе фото
-  await message.answer_photo(
+  await bot.send_photo(
+      chat_id=chat_id,
       photo=(
           "AgACAgIAAxkBAAEDIWxq6Ax_BRS7LAtIedmdf5y2xgzUngACuR1rG0upQEv-02Rb2GkdBAEAAwIAA3kAAz0E"
       ),
       caption="🔥 Слив владельца Douyin Streams (2/2)",
   )
     
+
 
 
 async def main():
