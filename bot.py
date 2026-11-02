@@ -61,29 +61,32 @@ async def process_pre_checkout_query(
   await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
 
-# 4. Успешная оплата -> Отправка двух твоих фоток альбомом
+# 4. Успешная оплата -> Отправка двух фоток по очереди
 @router.message(F.successful_payment)
 async def successful_payment(message: Message):
   await message.answer(
       "✅ Оплата прошла успешно! Держите обещанные материалы:"
   )
 
-  # Твои два file_id
-  media_group = [
-      InputMediaPhoto(
-          media=(
-              "AgACAgIAAxkBAAEDIWlq6AxUxIBA6aj7gacwUAmIOe9NgQACuh1rG0upQEsrRwksXr4cugEAAwIAA3kAAz0E"
-          ),
-          caption="🔥 Слив владельца Douyin Streams",
+  # Отправляем первое фото
+  await message.answer_photo(
+      photo=(
+          "AgACAgIAAxkBAAEDIWlq6AxUxIBA6aj7gacwUAmIOe9NgQACuh1rG0upQEsrRwksXr4cugEAAwIAA3kAAz0E"
       ),
-      InputMediaPhoto(
-          media=(
-              "AgACAgIAAxkBAAEDIWxq6Ax_BRS7LAtIedmdf5y2xgzUngACuR1rG0upQEv-02Rb2GkdBAEAAwIAA3kAAz0E"
-          )
-      ),
-  ]
+      caption="🔥 Слив владельца Douyin Streams (1/2)",
+  )
 
-  await message.answer_media_group(media=media_group)
+  # Небольшая пауза в 0.5 секунды
+  await asyncio.sleep(0.5)
+
+  # Отправляем второе фото
+  await message.answer_photo(
+      photo=(
+          "AgACAgIAAxkBAAEDIWxq6Ax_BRS7LAtIedmdf5y2xgzUngACuR1rG0upQEv-02Rb2GkdBAEAAwIAA3kAAz0E"
+      ),
+      caption="🔥 Слив владельца Douyin Streams (2/2)",
+  )
+    
 
 
 async def main():
